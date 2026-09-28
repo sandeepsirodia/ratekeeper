@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ratekeeper"
+version = "0.1.0"
+description = "Per-site budgets and push-back detection for browser agents: pacing, CAPTCHA and block detection, backoff, resume after restart."
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Sandeep Sirodia" }]
+requires-python = ">=3.10"
+keywords = ["rate-limiting", "browser-automation", "playwright", "browser-agents", "scraping-etiquette", "backoff", "circuit-breaker"]
+classifiers = ["Programming Language :: Python :: 3", "Topic :: Internet :: WWW/HTTP", "Environment :: Console"]
+
+[project.urls]
+Homepage = "https://github.com/sandeepsirodia/ratekeeper"
+
+[project.scripts]
+ratekeeper = "ratekeeper:main"
+
+[tool.setuptools]
+py-modules = ["ratekeeper"]
