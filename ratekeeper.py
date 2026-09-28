@@ -28,8 +28,13 @@ MINUTE, HOUR, DAY = 60.0, 3600.0, 86400.0
 DEFAULT_POLICY = {"per_minute": 4, "per_hour": 40, "per_day": 200, "min_gap": 8.0, "jitter": 0.5, "quiet": None,
                   "breaker_signals": 3, "breaker_window": 600.0, "cooldown": 1800.0, "backoff_base": 60.0, "backoff_max": 3600.0}
 
-CAPTCHA_RE = re.compile(r"g-recaptcha|recaptcha/api|www\.google\.com/recaptcha|hcaptcha\.com|h-captcha|cf-turnstile|"
-                        r"challenges\.cloudflare\.com|arkoselabs|funcaptcha|captcha-delivery|px-captcha", re.I)
+# Challenge pages and challenge frames only. Many ordinary forms *embed* an invisible reCAPTCHA or an hCaptcha
+# iframe (Greenhouse and Lever application forms both do): treating the widget's presence as a CAPTCHA would pause
+# every one of those sites. Browser callers that can see a challenge frame is visible pass observe(captcha=True).
+CAPTCHA_RE = re.compile(r"recaptcha/(api2|enterprise)/bframe|hcaptcha\.com/[^\"' ]*challenge|cf-chl-|challenge-platform|"
+                        r"<title>\s*just a moment\.\.\.|checking (if the site connection is secure|your browser)|"
+                        r"captcha-delivery\.com|px-captcha|arkoselabs\.com/fc|select all (images|squares) with|"
+                        r"complete the security check|i'm not a robot", re.I)
 SOFT_RE = re.compile(r"unusual (activity|traffic)|verify (that )?you(?:'re| are) (a )?human|are you a robot|"
                      r"too many requests|you(?:'ve| have) been (temporarily )?(blocked|rate.?limited)|access denied|"
                      r"automated (queries|requests|access)|suspicious activity|slow down", re.I)
@@ -191,7 +196,7 @@ class Keeper:
 
     # -------------------------------------------------- noticing push-back
 
-    def observe(self, site, text=None, url=None, status=None, headers=None, login_urls=None):
+    def observe(self, site, text=None, url=None, status=None, headers=None, login_urls=None, captcha=False):
         """Call after every page or response. Returns the signal seen ('captcha', 'rate-limit', 'blocked',
         'logged-out') or None. A clean page after a breaker's trial action closes the breaker."""
         now, p = self.clock(), self.policy(site)
@@ -207,7 +212,7 @@ class Keeper:
             self.pause(site, seconds=wait, reason="HTTP %s, waiting %ds" % (status, wait))
             return "rate-limit"
         body = text or ""
-        if CAPTCHA_RE.search(body):
+        if captcha or CAPTCHA_RE.search(body):
             self._signal(site, "captcha", now)
             self.pause(site, reason="CAPTCHA shown: needs a human", needs_human=True)
             return "captcha"

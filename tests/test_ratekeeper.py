@@ -101,13 +101,23 @@ class TestPushBack(unittest.TestCase):
 
     def test_e4_captcha_waits_for_a_human(self):
         k, c = keeper()
-        page = '<div class="g-recaptcha" data-sitekey="x"></div>'
+        page = "<html><head><title>Just a moment...</title></head><body><div id='cf-chl-widget'></div></body></html>"
         self.assertEqual(k.observe("site.test", text=page), "captcha")
         self.assertEqual(k.next_allowed("site.test"), math.inf)
         st = k.status()["sites"]["site.test"]["paused"]
         self.assertEqual((st["needs_human"], st["reason"]), (True, "CAPTCHA shown: needs a human"))
         k.resume("site.test")
         self.assertEqual(k.next_allowed("site.test"), T0)
+        k.close()
+
+    def test_embedded_invisible_captcha_on_a_normal_form_is_not_a_signal(self):
+        # Found on real Greenhouse and Lever application forms: the widget is always there, the challenge isn't.
+        k, _ = keeper()
+        form = ('<form><input id="first_name"><textarea name="g-recaptcha-response" style="display:none"></textarea>'
+                '<iframe src="https://newassets.hcaptcha.com/captcha/v1/abc/static/hcaptcha.html#frame=checkbox-invisible"></iframe>'
+                '<button>Submit application</button></form>')
+        self.assertIsNone(k.observe("site.test", text=form))
+        self.assertEqual(k.observe("site.test", text=form, captcha=True), "captcha", "a caller that sees the challenge says so")
         k.close()
 
     def test_logged_out_mid_flow_waits_for_a_human(self):

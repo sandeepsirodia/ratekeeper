@@ -32,9 +32,11 @@ signal = keeper.observe("greenhouse.io", text=page.content(), url=page.url)
 |---|---|
 | `429` / `503` with `Retry-After: 120` | Pauses that site for exactly 120 s. Other sites keep going. |
 | `429` without `Retry-After` | Exponential backoff with jitter (1 min, 2 min, 4 min… up to 1 h). |
-| A CAPTCHA (reCAPTCHA, hCaptcha, Turnstile, Arkose…) | **Pauses the site until a human resumes it.** It never tries to solve one. |
+| A CAPTCHA challenge (Cloudflare, reCAPTCHA, hCaptcha, DataDome, Arkose…) | **Pauses the site until a human resumes it.** It never tries to solve one. |
 | A redirect to a login page mid-flow | Pauses the site until you log in and resume. |
 | "Unusual activity", "verify you are human", "access denied"… | Counts it. At 3 such signals in 10 minutes, a **circuit breaker** opens for 30 minutes, then allows exactly one trial action. If the trial page is clean the breaker closes; if not, it reopens for twice as long. |
+
+**Challenges, not widgets.** Greenhouse and Lever application forms embed an invisible reCAPTCHA or hCaptcha on every page. The first version of ratekeeper treated that as a CAPTCHA and would have paused both sites on every visit. It now looks only for challenge pages and challenge frames. If your browser code can tell a challenge is visible, pass `observe(..., captcha=True)`.
 
 ## Pacing like a person
 
