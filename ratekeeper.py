@@ -38,6 +38,15 @@ CAPTCHA_RE = re.compile(r"recaptcha/(api2|enterprise)/bframe|hcaptcha\.com/[^\"'
 SOFT_RE = re.compile(r"unusual (activity|traffic)|verify (that )?you(?:'re| are) (a )?human|are you a robot|"
                      r"too many requests|you(?:'ve| have) been (temporarily )?(blocked|rate.?limited)|access denied|"
                      r"automated (queries|requests|access)|suspicious activity|slow down", re.I)
+SCRIPT_RE = re.compile(r"<(script|style|noscript|template)\b[^>]*>.*?</\1\s*>", re.I | re.S)
+
+
+def page_text(html):
+    """What a person could see: scripts and styles removed. Real pages carry block-page phrases in their JS bundles
+    ("429: Too Many Requests" in an error-message table) and bot-management scripts on normal pages."""
+    return SCRIPT_RE.sub(" ", html or "")
+
+
 LOGIN_RE = re.compile(r"/(login|log-in|signin|sign-in|sign_in|auth/|session/new|checkpoint|accounts/login)", re.I)
 
 SCHEMA = """
@@ -211,7 +220,7 @@ class Keeper:
             self._signal(site, "rate-limit", now)
             self.pause(site, seconds=wait, reason="HTTP %s, waiting %ds" % (status, wait))
             return "rate-limit"
-        body = text or ""
+        body = page_text(text)
         if captcha or CAPTCHA_RE.search(body):
             self._signal(site, "captcha", now)
             self.pause(site, reason="CAPTCHA shown: needs a human", needs_human=True)

@@ -120,6 +120,15 @@ class TestPushBack(unittest.TestCase):
         self.assertEqual(k.observe("site.test", text=form, captcha=True), "captcha", "a caller that sees the challenge says so")
         k.close()
 
+    def test_phrases_inside_scripts_are_not_signals(self):
+        # Both found on real career pages: an error table in a JS bundle, and Cloudflare's background bot script.
+        k, _ = keeper()
+        page = ('<html><head><script>var E={TOO_MANY:{message:"429: Too Many Requests"}};</script></head><body><h1>Careers</h1>'
+                "<script>a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js'</script><form><input name=email></form></body></html>")
+        self.assertIsNone(k.observe("site.test", text=page))
+        self.assertEqual(k.observe("site.test", text="<html><body><h1>Too many requests</h1></body></html>"), "blocked")
+        k.close()
+
     def test_logged_out_mid_flow_waits_for_a_human(self):
         k, _ = keeper()
         self.assertEqual(k.observe("site.test", url="https://site.test/accounts/login?next=/apply"), "logged-out")
